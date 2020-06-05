@@ -1,350 +1,298 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Text;
+using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Lab7
+namespace lab7
 {
-    class Fraction : IComparable<Fraction>, IEquatable<Fraction>
+    class Fraction : IComparable<Fraction>, IEquatable<Fraction>, IFormattable, ICloneable
     {
-        private long numerator;
-        private long denominator;
+        public long Numerator { get; private set; }
+        public long Denominator { get; private set; }
 
-        public long Numerator => numerator;
-        public long Denominator => denominator;
-
-        private static long GCD(long a, long b)
+        public Fraction(long numerator, long denominator)
         {
-            if (b == 0)
+            if (denominator == 0)
             {
-                return Math.Abs(a);
+                throw new DivideByZeroException("Denominator can't be zero!");
             }
-            return GCD(b, a % b);
-        }
-        private static void Reduce(ref long a, ref long b)
-        {
-            long gcd = GCD(a, b);
-            a /= gcd;
-            b /= gcd;
-        }
-        private void Reduce()
-        {
             Reduce(ref numerator, ref denominator);
+            Numerator = numerator;
+            Denominator = denominator;
         }
 
-        public Fraction(long n, long m)
+        static void Reduce(ref long numerator, ref long denominator)
         {
-            if (m == 0)
+            long gcd = GreatestCommonDivisor(numerator, denominator);
+            if (gcd == 0)
             {
-                throw new DivideByZeroException();
-            }
-            Reduce(ref n, ref m);
-            if (m < 0)
-            {
-                n = -n;
-                m = -m;
-            }
-            numerator = n;
-            denominator = m;
-        }
-        public Fraction(long n) : this(n, 1) { }
-        public Fraction() : this(0) { }
-        public Fraction(Fraction a) : this(a.Numerator, a.Denominator) { }
-
-        private int Compare(Fraction other)
-        {
-            long a, b;
-            checked
-            {
-                a = Numerator * other.Denominator;
-                b = other.Numerator * Denominator;
-            }
-            return a.CompareTo(b);
-        }
-
-        int IComparable<Fraction>.CompareTo(Fraction other)
-        {
-            return this.Compare(other);
-        }
-        bool IEquatable<Fraction>.Equals(Fraction other)
-        {
-            return this.Compare(other) == 0;
-        }
-        public override bool Equals(object obj)
-        {
-            return obj is Fraction fraction &&
-                   this.Compare(fraction) == 0;
-        }
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Numerator / Denominator);
-        }
-
-        public override string ToString()
-        {
-            return this.ToString(null);
-        }
-        public string ToString(string format)
-        {
-            if (String.IsNullOrEmpty(format))
-            {
-                format = "standart";
-            }
-            format = format.Trim().ToLowerInvariant();
-            switch (format)
-            {
-                case "standart":
-                    return Numerator.ToString() + '/' + Denominator.ToString();
-                case "float":
-                    return ((decimal)this).ToString();
-                case "integer":
-                    return ((long)this).ToString();
-                case "binary":
-                    {
-                        long n = Numerator, m = Denominator;
-                        StringBuilder ans = new StringBuilder();
-                        if (n < 0)
-                        {
-                            ans.Append('-');
-                            n = -n;
-                        }
-                        ans.Append(Convert.ToString(n / m, 2));
-                        n %= m;
-                        if (n > 0)
-                        {
-                            ans.Append('.');
-                            while (n > 0 && ans.Length < 42)
-                            {
-                                try
-                                {
-                                    checked
-                                    {
-                                        n *= 2;
-                                    }
-                                }
-                                catch
-                                {
-                                    break;
-                                }
-                                if (n >= m)
-                                {
-                                    ans.Append('1');
-                                    n -= m;
-                                }
-                                else
-                                {
-                                    ans.Append('0');
-                                }
-                            }
-                        }
-                        return ans.ToString();
-                    }
-                default:
-                    throw new FormatException(String.Format("The '{0}' format string is not supported.", format));
-            }
-        }
-        public static Fraction Parse(string s)
-        {
-            Regex regex;
-            MatchCollection match;
-
-            regex = new Regex(@"-?\d+\.\d+");
-            match = regex.Matches(s);
-            if (match.Count == 1)
-            {
-                try
-                {
-                    return decimal.
-                        Parse(match[0].Value,
-                        new System.Globalization.
-                        NumberFormatInfo {
-                        NumberDecimalSeparator = "." });
-                }
-                catch { }
+                return;
             }
 
-            regex = new Regex(@"-?\d+\,\d+");
-            match = regex.Matches(s);
-            if (match.Count == 1)
-            {
-                try
-                {
-                    return decimal.
-                        Parse(match[0].Value,
-                        new System.Globalization.
-                        NumberFormatInfo {
-                        NumberDecimalSeparator = "," });
-                }
-                catch { }
-            }
+            numerator /= gcd;
+            denominator /= gcd;
 
-            regex = new Regex(@"-?\d+");
-            match = regex.Matches(s);
-            if (match.Count == 2)
+            if (denominator < 0)
             {
-                try
-                {
-                    return new Fraction(
-                        long.Parse(match[0].Value), 
-                        long.Parse(match[1].Value));
-                }
-                catch { }
+                numerator *= -1;
+                denominator *= -1;
             }
-
-            if (match.Count == 1)
-            {
-                try
-                {
-                    return new Fraction(
-                        long.Parse(match[0].Value));
-                }
-                catch { }
-            }
-
-            throw new ArgumentException();
         }
+
 
         public static Fraction operator +(Fraction a, Fraction b)
         {
-            long n, m;
-            checked
-            {
-                n = a.Numerator * b.Denominator + a.Denominator * b.Numerator;
-                m = a.Denominator * b.Denominator;
-            }
-            return new Fraction(n, m);
-        }
-        public static Fraction operator -(Fraction a, Fraction b)
-        {
-            long n, m;
-            checked
-            {
-                n = a.Numerator * b.Denominator - a.Denominator * b.Numerator;
-                m = a.Denominator * b.Denominator;
-            }
-            return new Fraction(n, m);
-        }
-        public static Fraction operator *(Fraction a, Fraction b)
-        {
-            long n, m;
-            checked
-            {
-                n = a.Numerator * b.Numerator;
-                m = a.Denominator * b.Denominator;
-            }
-            return new Fraction(n, m);
-        }
-        public static Fraction operator /(Fraction a, Fraction b)
-        {
-            long n, m;
-            checked
-            {
-                n = a.Numerator * b.Denominator;
-                m = a.Denominator * b.Numerator;
-            }
-            return new Fraction(n, m);
+            long lcm = LeastCommonMultiple(a.Denominator, b.Denominator);
+            return new Fraction(a.Numerator * (lcm / a.Denominator) + b.Numerator * (lcm / b.Denominator), lcm);
         }
 
-        public static bool operator <(Fraction a, Fraction b)
+        public static Fraction operator -(Fraction a, Fraction b)
         {
-            return a.Compare(b) == -1;
+            return a + (-b);
         }
-        public static bool operator >(Fraction a, Fraction b)
+        
+        public static Fraction operator *(Fraction a, Fraction b)
         {
-            return a.Compare(b) == 1;
+            return new Fraction(a.Numerator * b.Numerator, a.Denominator * b.Denominator);
         }
-        public static bool operator ==(Fraction a, Fraction b)
+
+        public static Fraction operator /(Fraction a, Fraction b)
         {
-            return a.Compare(b) == 0;
+            if (b.Numerator == 0)
+            {
+                throw new DivideByZeroException("Can't devide by zero!");
+            }
+            return new Fraction(a.Numerator * b.Denominator, a.Denominator * b.Numerator);
         }
-        public static bool operator !=(Fraction a, Fraction b)
-        {
-            return a.Compare(b) != 0;
-        }
-        public static bool operator <=(Fraction a, Fraction b)
-        {
-            return a.Compare(b) != 1;
-        }
-        public static bool operator >=(Fraction a, Fraction b)
-        {
-            return a.Compare(b) != -1;
-        }
-        public static Fraction operator ++(Fraction a)
-        {
-            return a + 1;
-        }
-        public static Fraction operator --(Fraction a)
-        {
-            return a - 1;
-        }
-        public static bool operator true(Fraction a)
-        {
-            return a.Numerator != 0;
-        }
-        public static bool operator false(Fraction a)
-        {
-            return a.Numerator == 0;
-        }
+
         public static Fraction operator -(Fraction a)
         {
             return new Fraction(-a.Numerator, a.Denominator);
         }
+
         public static Fraction operator +(Fraction a)
         {
             return new Fraction(Math.Abs(a.Numerator), a.Denominator);
         }
 
-        public static implicit operator Fraction(long a)
+
+        public static bool operator >(Fraction a, Fraction b) =>
+            a.CompareTo(b) == 1;
+
+        public static bool operator >=(Fraction a, Fraction b) =>
+            a.CompareTo(b) >= 0;
+
+        public static bool operator <=(Fraction a, Fraction b) =>
+            a.CompareTo(b) <= 0;
+
+        public static bool operator <(Fraction a, Fraction b) =>
+            a.CompareTo(b) == -1;
+
+        public static bool operator ==(Fraction a, Fraction b) =>
+            a.CompareTo(b) == 0;
+
+        public static bool operator !=(Fraction a, Fraction b) =>
+            a.CompareTo(b) != 0;
+
+        public static bool operator true(Fraction a) =>
+            a.Numerator != 0;
+
+        public static bool operator false(Fraction a) =>
+            a.Numerator == 0;
+
+
+
+        public static explicit operator sbyte(Fraction a) =>
+            (sbyte)(double)a;
+
+        public static explicit operator byte(Fraction a) =>
+            (byte)(double)a;
+
+        public static explicit operator short(Fraction a) =>
+            (short)(double)a;
+
+        public static explicit operator ushort(Fraction a) =>
+            (ushort)(double)a;
+
+        public static explicit operator int(Fraction a) =>
+            (int)(double)a;
+
+        public static explicit operator uint(Fraction a) =>
+            (uint)(double)a;
+
+        public static explicit operator long(Fraction a) =>
+            a.Numerator / a.Denominator;
+
+        public static explicit operator ulong(Fraction a) =>
+            (ulong)(double)a;
+
+        public static explicit operator double(Fraction a) =>
+            (double)a.Numerator / a.Denominator;
+
+        public static explicit operator float(Fraction a) =>
+            (float)a.Numerator / a.Denominator;
+
+        public static explicit operator decimal(Fraction a) =>
+            (decimal)a.Numerator / a.Denominator;
+
+
+
+        public override string ToString()
         {
-            return new Fraction(a);
+            return ToString("FractionLike", CultureInfo.CurrentCulture);
         }
-        public static implicit operator Fraction(decimal a)
+
+        public string ToString(string format)
         {
-            long num, den = 1;
-            checked
+            return ToString(format, CultureInfo.CurrentCulture);
+        }
+
+        public string ToString(string format, IFormatProvider provider)
+        {
+            if (String.IsNullOrEmpty(format)) format = "FractionLike";
+            if (provider == null) provider = CultureInfo.CurrentCulture;
+
+            switch (format)
             {
-                num = (long)Math.Truncate(a);
+                case "FractionLike":
+                    return Numerator.ToString() + "/" + Denominator.ToString();
+                case "DoubleLike":
+                    return ((double)this).ToString("e15", provider);
+                case "DecimalLike":
+                    return ((decimal)this).ToString(provider);
+                default:
+                    throw new FormatException(String.Format("The {0} format string is not supported.", format));
             }
-            a -= Math.Truncate(a);
-            while (a != 0)
+        }
+
+        public static bool TryParse(string number, out Fraction result)
+        {
+            int sign = 1;
+            if (number[0] == '-')
             {
-                try
-                {
-                    checked
-                    {
-                        a *= 10;
-                        long tmpnum = num * 10 + (long)a;
-                        long tmpden = den * 10;
-                        num = tmpnum;
-                        den = tmpden;
-                        a -= Math.Truncate(a);
-                    }
-                }
-                catch
-                {
-                    break;
-                }
+                sign = -1;
+                number = number[1..];
             }
-            return new Fraction(num, den);
-        }
-        public static explicit operator long(Fraction a)
-        {
-            checked
+
+            Regex fractionLike = new Regex(@"^(\d+)/(\d+)$");
+            Regex doubleLike = new Regex(@"^(\d)[\.|\,](\d+)['e'|'E']['+'|'\-'](\d+)$");
+            Regex decimalLike = new Regex(@"^(\d+)[\.|\,](\d+)$");
+            Regex longLike = new Regex(@"^(\d+)$");
+
+            if (fractionLike.IsMatch(number))
             {
-                long ans = a.Numerator / a.Denominator;
-                if ((Math.Abs(a.Numerator) % a.Denominator) * 2 >= a.Denominator)
+                int indexOfSlash = number.IndexOf("/");
+                long num = long.Parse(number.Substring(0, indexOfSlash));
+                long den = long.Parse(number.Substring(indexOfSlash + 1, number.Length - indexOfSlash - 1));
+                if (den == 0)
                 {
-                    ans += a.Numerator / Math.Abs(a.Numerator);
+                    throw new DivideByZeroException("Can't devide by zero!");
                 }
-                return ans;
+                result = new Fraction(sign * num, den);
+                return true;
             }
+
+            if (doubleLike.IsMatch(number))
+            {
+                int ePos = number.ToLowerInvariant().IndexOf("e");
+
+                long num = long.Parse(number[0] + number[2..ePos]);
+                long pow10 = -(ePos - 2) + (number[ePos + 1] == '-' ? -1 : +1) * long.Parse(number[(ePos + 2)..]);
+
+                if (pow10 < 0)
+                {
+                    result = new Fraction(sign * num, BinPow(10, -pow10));
+                } 
+                else
+                {
+                    result = new Fraction(sign * num * BinPow(10, pow10), 1);
+                }
+                return true;
+            }
+
+            if (decimalLike.IsMatch(number))
+            {
+                int pointPos = number.IndexOf('.');
+                if (pointPos == -1)
+                    pointPos = number.IndexOf(',');
+                long num = long.Parse(number.Substring(0, pointPos) + number[(pointPos + 1)..]);
+                
+                result = new Fraction(sign * num, BinPow(10, number.Length - pointPos - 1));
+                return true;
+            }
+
+            if (longLike.IsMatch(number))
+            {
+                result = new Fraction(sign * long.Parse(number), 1);
+                return true;
+            }
+
+            result = null;
+            return false;
         }
-        public static explicit operator double(Fraction a)
+
+        public int CompareTo(Fraction other)
         {
-            return ((double)a.Numerator) / a.Denominator;
+            long lcm = LeastCommonMultiple(Denominator, other.Denominator);
+            if (lcm / Denominator * Numerator > lcm / other.Denominator * other.Numerator)
+                return 1;
+            else if (lcm / Denominator * Numerator < lcm / other.Denominator * other.Numerator)
+                return -1;
+            else return 0;
         }
-        public static explicit operator decimal(Fraction a)
+
+        public override bool Equals(Object obj)
         {
-            return ((decimal)a.Numerator) / a.Denominator;
+            if (obj == null || !(obj is Fraction))
+                return false;
+            else
+                return CompareTo((Fraction)obj) == 0;
         }
+
+        public override int GetHashCode()
+        {
+            return (int)((Numerator ^ Denominator) % (1000000000 + 7));
+        }
+
+        public bool Equals(Fraction other)
+        {
+            return CompareTo(other) == 0;
+        }
+
+        public object Clone()
+        {
+            return MemberwiseClone();
+        }
+
+        static long GreatestCommonDivisor(long a, long b)
+        {
+            return b == 0 ? a : GreatestCommonDivisor(b, a % b);
+        }
+
+        static long LeastCommonMultiple(long a, long b)
+        {
+            return a / GreatestCommonDivisor(a, b) * b;
+        }
+
+        static long BinPow(long a, long b)
+        {
+            long res = 1;
+            while (b > 0) {
+                if ((b & 1) > 0)
+                {
+                    res *= a;
+                    b--;
+                }
+                else
+                {
+                    a *= a;
+                    b >>= 1;
+                }
+            }
+            return res;
+        }
+
     }
 }
