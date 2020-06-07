@@ -34,14 +34,16 @@ namespace Lab2
             System.Threading.Thread.CurrentThread.CurrentCulture = ci;
             System.Threading.Thread.CurrentThread.CurrentUICulture = ci;
             string write = "";
-            write += String.Format("   {0} \n", ci.EnglishName);
+            Stringbuilder wr = new Stringbuilder(“”);
+            wr.AppendFormat("   {0} \n", ci.EnglishName);
             for (int i = 0; i < 12; i++)
             {
-                write += String.Format("{0,2}: {1}\n", i + 1, DateTimeFormatInfo.CurrentInfo.MonthNames[i]);
+                wr.AppendFormat("{0,2}: {1}\n", i + 1, DateTimeFormatInfo.CurrentInfo.MonthNames[i]);
             }
             System.Threading.Thread.CurrentThread.CurrentCulture = lastCulture;
             System.Threading.Thread.CurrentThread.CurrentUICulture = lastUICulture;
-            return write;
+            string temp = wr.ToString();
+            return temp;
         }
         static public CultureInfo LanguageToCulture(string lang)
         {
