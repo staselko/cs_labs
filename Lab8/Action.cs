@@ -6,23 +6,7 @@ namespace Calculator
 {
     delegate double OperationDelegate(double x, double y);
     delegate void showHandler(string OperationName);
-    void GetNameOperations(showHandler whereToGet)
-        {
-            Showing += whereToGet;
-            foreach (string s in _operationName)
-            {
-                Showing(s);
-            }
-            
-        } 
-     void GetNameOperations()
-        {
-            foreach (string s in _operationName)
-            {
-                Showing(s);
-            }
 
-        }
     class Action
     {
         public event showHandler Showing = (OperationName) => { };
@@ -66,6 +50,24 @@ namespace Calculator
                 Showing(ex.ToString());
                 return 0;
             }
+        }
+        
+            void GetNameOperations(showHandler whereToGet)
+        {
+            Showing += whereToGet;
+            foreach (string s in _operationName)
+            {
+                Showing(s);
+            }
+            
+        } 
+     void GetNameOperations()
+        {
+            foreach (string s in _operationName)
+            {
+                Showing(s);
+            }
+
         }
 
         private double DoDivision(double x, double y) { return x / y; }
